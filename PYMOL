@@ -1,0 +1,39 @@
+reinitialize
+load emrb_fixed.pdb, emrb_fixed
+load cccp_74_top1.pdb, cccp_74_top1
+
+hide everything
+show cartoon, emrb_fixed
+color slate, emrb_fixed
+
+show sticks, cccp_74_top1
+set stick_radius, 0.20, cccp_74_top1
+util.cbaw cccp_74_top1
+
+# mark the docking center
+pseudoatom ctr, pos=[217.834,222.829,314.627]
+show spheres, ctr
+set sphere_scale, 0.6, ctr
+color yellow, ctr
+zoom cccp_74_top1, 10
+
+# (If created a distance object earlier) Remove cluttering dashes
+delete dist*      # or: delete ctr_to_lig
+hide labels
+
+# Optional: show quick H-bond suggestions (loose cutoff)
+# from protein N/O within 3.5 Å to ligand N/O
+dist hbonds, (emrb_fixed and (name N+O) within 3.5 of cccp_74_top1), (cccp_74_top1 and (name N+O))
+show dashes, hbonds
+set dash_width, 2
+set dash_color, yellow
+
+bg_color white
+set ray_opaque_background, off
+# label residues near ligand (example: within 4 Å)
+select pocket, byres (emrb_fixed within 4 of cccp_74_top1)
+label pocket and name CA, "%s% s%s" % (resn, resi, chain)
+
+ray 2000,1500
+# if Save Image is available:
+# png emrb_cccp_final.png, dpi=600, ray=1
