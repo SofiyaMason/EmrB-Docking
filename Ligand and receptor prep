@@ -1,0 +1,28 @@
+conda activate vina-tools
+
+cd ~/Documents/docking/CCCP9.0    (change pH accordingly) 
+
+obabel ../cccp.sdf -O cccp_pH9.pdb --gen3d --minimize -p 9   (3D conformers) 
+
+obabel cccp_pH9.pdb -O ligand_pH9.pdbqt  (file conversion)
+
+ls cccp_pH9.pdb ligand_pH9.pdbqt   (sanity check) 
+
+cd ~/Documents/docking/RECEPTOR
+mkdir -p pH9                      (make new folder under receptor file) 
+
+python - <<'PY'
+from pdbfixer import PDBFixer
+from openmm.app import PDBFile
+
+fixer = PDBFixer(filename='pH6/emrb_clean.pdb')  # use cleaned file from previous step
+fixer.addMissingHydrogens(pH=9.0)
+
+with open('pH9/emrb_pH9.pdb', 'w') as f:
+    PDBFile.writeFile(fixer.topology, fixer.positions, f, keepIds=True)
+print("Wrote pH9/emrb_pH9.pdb")
+PY                                 (clean receptor) 
+
+obabel pH9/emrb_pH9.pdb -O pH9/receptor_pH9.pdbqt     (file conversion) 
+
+ls pH9/emrb_pH9.pdb pH9/receptor_pH9.pdbqt    (sanity check) 
