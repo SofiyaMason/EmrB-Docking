@@ -1,0 +1,58 @@
+#Process for starting each receptor (specific pH) and ligand (specific pH)
+
+mkdir -p ~/Documents/docking/*name of folder*
+cd ~/Documents/docking/*name of folder*
+
+#Ensure sdf file is in that folder for conversion
+
+#This is to obtain the SMILES of the ligands 
+smi=$(obabel ligand.sdf -osmi -xl | head -n1); echo "SMILES: $smi"
+
+#This is to enumerate microstates at pH X
+dimorphite_dl --ph_min X --ph_max X --precision 0.5 \    (min and max should be the same)
+--output_file ligand_pHX.smi "$smi"
+
+#This is to build the 3D conformers of the SMILES file and then to convert it to .pdbqt
+i=0
+while read -r line; do
+  [ -z "$line" ] && continue
+  i=$((i+1))
+  obabel -:"$line" -O ligand_pHX_m${i}.pdb --gen3d --minimize
+  obabel  ligand_pHX_m${i}.pdb -O ligan_pHX_m${i}.pdbqt
+done < ligand_pHX.smi
+
+#Sanity check: 
+ls -lh nitroxoline_pH8_0_m*.pdbqt
+
+Docking run including all microstates
+
+BASE=~/Documents/docking
+REC=$BASE/RECEPTOR/pHX/receptor_pHX.pdbqt
+WD=$BASE/LIGAND_pHX
+OUT=$WD/results; mkdir -p "$OUT"
+
+# grid & settings (same as before)
+CX=217.834; CY=222.829; CZ=314.627
+SX=20; SY=20; SZ=20
+EXH=24; NUM_MODES=20; ENERGY_RANGE=4; SEED=42
+
+cd "$WD"
+
+dock_one () {
+  local LIG="$1" TAG=$(basename "${1%.pdbqt}")
+  vina \
+    --receptor "$REC" \
+    --ligand   "$LIG" \
+    --center_x "$CX" --center_y "$CY" --center_z "$CZ" \
+    --size_x   "$SX" --size_y   "$SY" --size_z   "$SZ" \
+    --exhaustiveness "$EXH" --num_modes "$NUM_MODES" --energy_range "$ENERGY_RANGE" \
+    --cpu 1 --seed "$SEED" \
+    --out "$OUT/${TAG}_poses.pdbqt" 2>&1 | tee "$OUT/${TAG}.log"
+
+  #Split & save top pose as PDB
+  vina_split --input "$OUT/${TAG}_poses.pdbqt"
+  obabel "$OUT"/${TAG}_poses*_ligand_01.pdbqt -O "$OUT/${TAG}_top.pdb"
+}
+
+# run both microstates
+for L in nitroxoline_pH8_0_m*.pdbqt; do dock_one "$L"; done
