@@ -1,0 +1,37 @@
+WORKING OUT ALTERNATIVE CONFORMATION CENTRE BOXES 
+
+# EDIT THIS to your residue numbers for this conformation:
+RES="35,88,119,243,244"   # <-- example; replace with yours
+
+cd ~/Documents/docking/RECEPTOR_ALT/pH7_4
+FILE=emrb_alt_pH7_4_receptor.pdbqt
+awk -v reslist="$RES" '
+BEGIN{
+  nres=split(reslist,tmp,",");
+  for(i=1;i<=nres;i++) res[tmp[i]+0]=1;
+}
+function coord(s,p,l){ return substr(s,p,l)+0 }
+function update(x,y,z){
+  if(!init){xmin=x; xmax=x; ymin=y; ymax=y; zmin=z; zmax=z; init=1}
+  if(x<xmin)xmin=x; if(x>xmax)xmax=x;
+  if(y<ymin)ymin=y; if(y>ymax)ymax=y;
+  if(z<zmin)zmin=z; if(z>zmax)zmax=z;
+  sx+=x; sy+=y; sz+=z; n++;
+}
+# PDBQT fixed-column parsing
+/^(ATOM|HETATM)/{
+  rid=int(substr($0,23,4))+0;      # residue number cols 23-26
+  if(rid in res){
+    x=coord($0,31,8); y=coord($0,39,8); z=coord($0,47,8);
+    update(x,y,z)
+  }
+}
+END{
+  if(n==0){ print "ERROR: none of those residues found."; exit 1 }
+  cx=sx/n; cy=sy/n; cz=sz/n;
+  # sizes with padding (Å)
+  pad=6.0;
+  sx=(xmax-xmin)+pad; sy=(ymax-ymin)+pad; sz=(zmax-zmin)+pad;
+  printf "CX=%.3f; CY=%.3f; CZ=%.3f\n", cx,cy,cz;
+  printf "SX=%.3f; SY=%.3f; SZ=%.3f\n", sx,sy,sz;
+}' "$FILE"
