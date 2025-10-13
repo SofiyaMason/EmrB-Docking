@@ -37,3 +37,20 @@ label pocket and name CA, "%s% s%s" % (resn, resi, chain)
 ray 2000,1500
 # if Save Image is available:
 # png emrb_cccp_final.png, dpi=600, ray=1
+
+analysis of bonds -pymol
+
+select hb_residues, receptor_pH7_4 within 3.5 of nitroxoline_m1
+select hb_residues, byres (receptor_pH7_4 within 3.5 of nitroxoline_m1)
+iterate hb_residues, print(resn, resi)
+
+select hb_resides, byres (emrb_pH9 within 3.5 of pH9_top)
+
+python
+from pymol import cmd
+residues = set()
+cmd.iterate("hb_resides", "residues.add((resn, resi))", space=locals())
+for resn, resi in sorted(residues, key=lambda x: int(x[1])):
+    print(f"{resn} {resi}")
+print(f"\nTotal interacting residues: {len(residues)}")
+python end
